@@ -1,4 +1,67 @@
+function EnumerateVehicles()
+    return EnumerateEntities(FindFirstVehicle, FindNextVehicle, EndFindVehicle)
+end
+local entityEnumerator = {
+    __gc = function(enum)
+      if enum.destructor and enum.handle then
+        enum.destructor(enum.handle)
+      end
+      enum.destructor = nil
+      enum.handle = nil
+    end
+}
+  
+  local function EnumerateEntities(initFunc, moveFunc, disposeFunc)
+    return coroutine.wrap(function()
+      local iter, id = initFunc()
+      if not id or id == 0 then
+        disposeFunc(iter)
+        return
+      end
+      
+      local enum = {handle = iter, destructor = disposeFunc}
+      setmetatable(enum, entityEnumerator)
+      
+      local next = true
+      repeat
+        coroutine.yield(id)
+        next, id = moveFunc(iter)
+      until not next
+      
+      enum.destructor, enum.handle = nil, nil
+      disposeFunc(iter)
+    end)
+end
 
+function pairsByKeys (t, f)
+	local a = {}
+	for n in pairs(t) do table.insert(a, n) end
+	table.sort(a, f)
+	local i = 0
+	local iter = function ()
+	    i = i + 1
+	    if a[i] == nil then return nil
+	        else return a[i], t[a[i]]
+	    end
+    end
+	return iter
+end
+
+function GetClosestVehicles(pos, radius)
+	local vehicles = {}
+	local sortedVehicles = {}
+	for vehicle in EnumerateVehicles() do
+		local vp = GetEntityCoords(vehicle)
+		local dist = GetDistanceBetweenCoords(vp.x, vp.y, vp.z, pos.x, pos.y, pos.z, true)
+		if dist < radius then
+			vehicles[dist] = vehicle
+		end
+	end
+	for i,v in pairsByKeys(vehicles) do
+		table.insert(sortedVehicles,v)
+	end
+	return sortedVehicles
+end
 
 function getNextAvailablePassengerSeat(veh)
     if GetVehicleModelNumberOfSeats(GetEntityModel(veh)) > 0 then
