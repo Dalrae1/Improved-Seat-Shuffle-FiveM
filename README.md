@@ -2,6 +2,7 @@
 Allows players to shuffle seats and enter passenger seats with ease
 
 To use enter vehicle as passenger just press G when near a vehicle.
+To shuffle your seat, just do /shuff
 
 Known bugs:
 
