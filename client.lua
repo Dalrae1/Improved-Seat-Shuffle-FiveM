@@ -1,6 +1,3 @@
-function EnumerateVehicles()
-    return EnumerateEntities(FindFirstVehicle, FindNextVehicle, EndFindVehicle)
-end
 local entityEnumerator = {
     __gc = function(enum)
       if enum.destructor and enum.handle then
@@ -11,7 +8,7 @@ local entityEnumerator = {
     end
 }
   
-  local function EnumerateEntities(initFunc, moveFunc, disposeFunc)
+local function EnumerateEntities(initFunc, moveFunc, disposeFunc)
     return coroutine.wrap(function()
       local iter, id = initFunc()
       if not id or id == 0 then
@@ -31,6 +28,10 @@ local entityEnumerator = {
       enum.destructor, enum.handle = nil, nil
       disposeFunc(iter)
     end)
+end
+
+function EnumerateVehicles()
+    return EnumerateEntities(FindFirstVehicle, FindNextVehicle, EndFindVehicle)
 end
 
 function pairsByKeys (t, f)
