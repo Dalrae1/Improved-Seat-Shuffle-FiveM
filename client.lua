@@ -127,6 +127,7 @@ CreateThread(function()
             end
             lastExitVehicle = GetGameTimer()
         else
+            isShuffling = false
             if GetIsTaskActive(PlayerPedId(), 195) and (IsControlPressed(0,32) or IsControlPressed(0,33) or IsControlPressed(0,34) or IsControlPressed(0,35)) then -- If is trying to move while entering vehicle
                 ClearPedTasks(PlayerPedId())
             end
