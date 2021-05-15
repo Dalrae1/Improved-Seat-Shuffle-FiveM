@@ -98,9 +98,21 @@ local didActuallyExit = false
 local lastExitVehicle = GetGameTimer()
 local _, group1Hash = AddRelationshipGroup("group1")
 local _, group2Hash = AddRelationshipGroup("group2")
+local timing = 1
 CreateThread(function()
 	while true do
-		Wait(1)
+        local closestVeh = GetClosestVehicles(GetEntityCoords(PlayerPedId()), 10)[1]
+        if closestVeh then
+            timing = 1
+        else
+            timing = 1000
+        end
+        Wait(1000)
+    end
+end)
+CreateThread(function()
+	while true do
+		Wait(timing)
         local myPed = PlayerPedId()
 		if IsPedInAnyVehicle(myPed, false) then
             local myVehicle = GetVehiclePedIsIn(myPed, false)
