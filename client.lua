@@ -98,18 +98,18 @@ local didActuallyExit = false
 local lastExitVehicle = GetGameTimer()
 local _, group1Hash = AddRelationshipGroup("group1")
 local _, group2Hash = AddRelationshipGroup("group2")
-Citizen.CreateThread(function()
+CreateThread(function()
 	while true do
-		Citizen.Wait(0)
+		Wait(1)
         local myPed = PlayerPedId()
 		if IsPedInAnyVehicle(myPed, false) then
+            local myVehicle = GetVehiclePedIsIn(myPed, false)
             if not isShuffling then
-                local myVehicle = GetVehiclePedIsIn(myPed, false)
                 --[[ Prevent player from being kicked out of back seats ]]
                 if IsControlJustPressed(0, 75) then -- F
                     didActuallyExit = true
                     CreateThread(function()
-                        Wait(2000) -- Time the getting out animation will last
+                        Wait(4000) -- Time the getting out animation will last
                         didActuallyExit = false
                     end)
                 end
@@ -120,12 +120,14 @@ Citizen.CreateThread(function()
                 if IsControlJustPressed(0, 75) and IsPedInAnyVehicle(PlayerPedId()) then -- Pressed F and is in vehicle
                     TaskLeaveVehicle(PlayerPedId(), GetVehiclePedIsIn(PlayerPedId(), true), 64)
                 end
-            else
-                ClearRelationshipBetweenGroups(0, group1Hash, group2Hash)
+                --[[ Prevent auto shuffling in an empty vehicle ]]
+                if GetPedInVehicleSeat(myVehicle, 0) == PlayerPedId() and GetIsTaskActive(PlayerPedId(), 165) and not isShuffling then
+                    SetPedIntoVehicle(PlayerPedId(), myVehicle, 0)
+                end
             end
             lastExitVehicle = GetGameTimer()
         else
-            if (IsControlJustPressed(0,32) or IsControlJustPressed(0,33) or IsControlJustPressed(0,34) or IsControlJustPressed(0,35)) and GetIsTaskActive(PlayerPedId(), 195) then -- If is trying to move while entering vehicle
+            if GetIsTaskActive(PlayerPedId(), 195) and (IsControlPressed(0,32) or IsControlPressed(0,33) or IsControlPressed(0,34) or IsControlPressed(0,35)) then -- If is trying to move while entering vehicle
                 ClearPedTasks(PlayerPedId())
             end
             --[[ Allow player to enter passenger seat when pressing G]]
@@ -160,9 +162,11 @@ Citizen.CreateThread(function()
 end)
 
 RegisterCommand("shuff", function(source, args, raw)
-    if IsPedInAnyVehicle(PlayerPedId(), false) then
+    if not GetIsTaskActive(PlayerPedId(), 165) and IsPedInAnyVehicle(PlayerPedId(), false) then
 		isShuffling = true
-		Wait(5000)
+        ClearRelationshipBetweenGroups(0, group1Hash, group2Hash)
+        TaskShuffleToNextVehicleSeat(PlayerPedId(), GetVehiclePedIsIn(PlayerPedId()))
+		Wait(3000)
 		isShuffling = false
 	else
 		CancelEvent()
