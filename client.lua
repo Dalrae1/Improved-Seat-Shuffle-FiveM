@@ -1,3 +1,5 @@
+local walkToCorrectDoor = false -- Very buggy, doesn't work reliably with moving vehicles and causes jittery motions.
+
 local entityEnumerator = {
     __gc = function(enum)
       if enum.destructor and enum.handle then
@@ -84,15 +86,38 @@ function getSeatPedIsIn(ped, veh)
     end
     return false
 end
-
-function isPedPlayer(ped)
-    for _, player in pairs(GetActivePlayers()) do
-        if GetPlayerPed(player) == ped then
-            return true
+function printCurrentPedTasks(ped)
+    for i=1,500 do
+        if GetIsTaskActive(ped, i) then
+            print("Doing ped task "..i)
         end
     end
-    return false
 end
+
+ClearPedTasksImmediately(PlayerPedId())
+function walkToVehicleSeat(veh, seatIndex)
+    local doorPosition
+    print(seatIndex)
+    if seatIndex == -1 then
+        doorPosition = GetEntityBonePosition_2(veh, GetEntityBoneIndexByName(veh, "door_dside_f"))
+    elseif seatIndex == 0 then
+        doorPosition = GetEntityBonePosition_2(veh, GetEntityBoneIndexByName(veh, "door_pside_f"))
+    elseif seatIndex == 1 then
+        doorPosition = GetEntityBonePosition_2(veh, GetEntityBoneIndexByName(veh, "door_dside_r"))
+    elseif seatIndex == 2 then
+        doorPosition = GetEntityBonePosition_2(veh, GetEntityBoneIndexByName(veh, "door_pside_r"))
+    end
+    local doorPosOffset = GetEntityCoords(veh)-doorPosition
+    --SetEntityCoords(PlayerPedId(), GetEntityCoords(veh)+doorPosOffset)
+    --TaskGotoEntityOffsetXy(PlayerPedId(), veh, 5000.0, doorPosOffset.x, doorPosOffset.y, doorPosOffset.z, 100.0, true)
+    TaskGoToCoordAnyMeans(PlayerPedId(), doorPosition.x, doorPosition.y, doorPosition.z, 2.0, 0, 0, 786603)
+    local timer = GetGameTimer()
+    repeat Wait(0) until (GetDistanceBetweenCoords(GetEntityCoords(PlayerPedId()), doorPosition) < 1) or GetGameTimer()-timer > 5000
+    ClearPedTasksImmediately(PlayerPedId())
+end
+
+--walkToVehicleSeat(closestVehicle, -1)
+
 local isShuffling = false
 local didActuallyExit = false
 local _, group1Hash = AddRelationshipGroup("group1")
@@ -137,8 +162,9 @@ CreateThread(function()
                 end
             end
         else
+            FreezeEntityPosition(PlayerPedId(), false)
             isShuffling = false
-            if GetIsTaskActive(PlayerPedId(), 195) and (IsControlPressed(0,32) or IsControlPressed(0,33) or IsControlPressed(0,34) or IsControlPressed(0,35)) then -- If is trying to move while entering vehicle
+            if (GetIsTaskActive(PlayerPedId(), 195) or GetIsTaskActive(PlayerPedId(), 35)) and (IsControlPressed(0,32) or IsControlPressed(0,33) or IsControlPressed(0,34) or IsControlPressed(0,35)) then -- If is trying to move while entering vehicle
                 ClearPedTasks(PlayerPedId())
             end
             --[[ Allow player to enter passenger seat when pressing G]]
@@ -147,7 +173,19 @@ CreateThread(function()
                 if closestVehicle then
                     local freeSeat = getNextAvailablePassengerSeat(closestVehicle)
                     if freeSeat then
-                        TaskEnterVehicle(PlayerPedId(),closestVehicle, 10.0, freeSeat, 1.0, 0, 0)
+                        if walkToCorrectDoor then
+                            walkToVehicleSeat(closestVehicle, freeSeat)
+                        end
+                        TaskEnterVehicle(PlayerPedId(),closestVehicle, 10.0, freeSeat, 2.0, 0, 0)
+                        --[[ Prevent players from getting into the same seat ]]
+                        CreateThread(function()
+                            while GetIsTaskActive(PlayerPedId(), 160) do
+                                Wait(0)
+                                if not GetPedInVehicleSeat(closestVehicle, freeSeat) and GetPedInVehicleSeat(closestVehicle, freeSeat) ~= PlayerPedId() then
+                                    ClearPedTasks(PlayerPedId())
+                                end
+                            end
+                        end)
                     end
                 end
             end
