@@ -35,33 +35,33 @@ function EnumerateVehicles()
 end
 
 function pairsByKeys (t, f)
-	local a = {}
-	for n in pairs(t) do table.insert(a, n) end
-	table.sort(a, f)
-	local i = 0
-	local iter = function ()
-	    i = i + 1
-	    if a[i] == nil then return nil
-	        else return a[i], t[a[i]]
-	    end
+    local a = {}
+    for n in pairs(t) do table.insert(a, n) end
+    table.sort(a, f)
+    local i = 0
+    local iter = function()
+        i = i + 1
+        if a[i] == nil then return nil
+            else return a[i], t[a[i]]
+        end
     end
-	return iter
+    return iter
 end
 
 function GetClosestVehicles(pos, radius)
-	local vehicles = {}
-	local sortedVehicles = {}
-	for vehicle in EnumerateVehicles() do
-		local vp = GetEntityCoords(vehicle)
-		local dist = GetDistanceBetweenCoords(vp.x, vp.y, vp.z, pos.x, pos.y, pos.z, true)
-		if dist < radius then
-			vehicles[dist] = vehicle
-		end
-	end
-	for i,v in pairsByKeys(vehicles) do
-		table.insert(sortedVehicles,v)
-	end
-	return sortedVehicles
+    local vehicles = {}
+    local sortedVehicles = {}
+    for vehicle in EnumerateVehicles() do
+        local vp = GetEntityCoords(vehicle)
+        local dist = GetDistanceBetweenCoords(vp.x, vp.y, vp.z, pos.x, pos.y, pos.z, true)
+        if dist < radius then
+            vehicles[dist] = vehicle
+        end
+    end
+    for i,v in pairsByKeys(vehicles) do
+        table.insert(sortedVehicles,v)
+    end
+    return sortedVehicles
 end
 
 function getNextAvailablePassengerSeat(veh)
@@ -95,12 +95,11 @@ function isPedPlayer(ped)
 end
 local isShuffling = false
 local didActuallyExit = false
-local lastExitVehicle = GetGameTimer()
 local _, group1Hash = AddRelationshipGroup("group1")
 local _, group2Hash = AddRelationshipGroup("group2")
 local timing = 1
 CreateThread(function()
-	while true do
+    while true do
         local closestVeh = GetClosestVehicles(GetEntityCoords(PlayerPedId()), 10)[1]
         if closestVeh then
             timing = 1
@@ -111,17 +110,17 @@ CreateThread(function()
     end
 end)
 CreateThread(function()
-	while true do
-		Wait(timing)
+    while true do
+        Wait(timing)
         local myPed = PlayerPedId()
-		if IsPedInAnyVehicle(myPed, false) then
+        if IsPedInAnyVehicle(myPed, false) then
             local myVehicle = GetVehiclePedIsIn(myPed, false)
             if not isShuffling then
                 --[[ Prevent player from being kicked out of back seats ]]
                 if IsControlJustPressed(0, 75) then -- F
                     didActuallyExit = true
                     CreateThread(function()
-                        Wait(4000) -- Time the getting out animation will last
+                        repeat Wait(0) until not (GetIsTaskActive(PlayerPedId(), 2))
                         didActuallyExit = false
                     end)
                 end
@@ -137,7 +136,6 @@ CreateThread(function()
                     SetPedIntoVehicle(PlayerPedId(), myVehicle, 0)
                 end
             end
-            lastExitVehicle = GetGameTimer()
         else
             isShuffling = false
             if GetIsTaskActive(PlayerPedId(), 195) and (IsControlPressed(0,32) or IsControlPressed(0,33) or IsControlPressed(0,34) or IsControlPressed(0,35)) then -- If is trying to move while entering vehicle
@@ -171,17 +169,15 @@ CreateThread(function()
                 end
             end
         end
-	end
+    end
 end)
 
 RegisterCommand("shuff", function(source, args, raw)
     if not GetIsTaskActive(PlayerPedId(), 165) and IsPedInAnyVehicle(PlayerPedId(), false) then
-		isShuffling = true
+        isShuffling = true
         ClearRelationshipBetweenGroups(0, group1Hash, group2Hash)
         TaskShuffleToNextVehicleSeat(PlayerPedId(), GetVehiclePedIsIn(PlayerPedId()))
-		Wait(3000)
-		isShuffling = false
-	else
-		CancelEvent()
-	end
-end, false)
+        repeat Wait(0) until not GetIsTaskActive(PlayerPedId(), 165)
+        isShuffling = false
+    end
+end)
